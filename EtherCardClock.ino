@@ -21,13 +21,6 @@ static uint8_t mymac[6] = { 0,0,0,0,0,0 };
 static uint8_t mymac[6] = { 0x54,0x55,0x58,0x10,0x00,0x25};
 #endif
 
-// IP and netmask allocated by DHCP
-static uint8_t myip[4] = { 0,0,0,0 };
-static uint8_t mynetmask[4] = { 0,0,0,0 };
-static uint8_t gwip[4] = { 0,0,0,0 };
-static uint8_t dnsip[4] = { 0,0,0,0 };
-static uint8_t dhcpsvrip[4] = { 0,0,0,0 };
-
 static int currentTimeserver = 0;
 
 // Find list of servers at http://support.ntp.org/bin/view/Servers/StratumTwoTimeServers
