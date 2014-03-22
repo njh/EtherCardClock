@@ -124,8 +124,8 @@ uint8_t gmtime(const uint32_t time,char *day, char *clock)
 
 
 void setup(){
-  Serial.begin(19200);
   Serial.println( F("EtherCard/Nanode NTP Client" ) );
+  Serial.begin(9600);
   
   currentTimeserver = 0;
 
