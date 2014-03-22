@@ -12,13 +12,13 @@
 #include <NanodeMAC.h>
 #endif
 
-// Jan 1 
+// Jan 1
 #define SECS_YR_1900_2000  (3155673600UL)
 
 #ifdef NANODE
-static uint8_t mymac[6] = { 0,0,0,0,0,0 };
+static uint8_t mymac[6] = { 0, 0, 0, 0, 0, 0 };
 #else
-static uint8_t mymac[6] = { 0x54,0x55,0x58,0x10,0x00,0x25};
+static uint8_t mymac[6] = { 0x54, 0x55, 0x58, 0x10, 0x00, 0x25 };
 #endif
 
 static int currentTimeserver = 0;
@@ -35,14 +35,13 @@ prog_char ntp2[] PROGMEM = "2.pool.ntp.org";
 
 // Now define another array in PROGMEM for the above strings
 prog_char *ntpList[] PROGMEM = { ntp0, ntp1, ntp2 };
-  
-// Packet buffer, must be big enough to packet and payload
-#define BUFFER_SIZE 550
-byte Ethernet::buffer[BUFFER_SIZE];
+
+// Packet buffer, must be big enough for packet and payload
+byte Ethernet::buffer[550];
 uint8_t clientPort = 123;
 
 #ifdef NANODE
-NanodeMAC mac( mymac );
+NanodeMAC mac(mymac);
 #endif
 
 // The next part is to deal with converting time received from NTP servers
@@ -57,7 +56,7 @@ uint32_t timeLong;
 
 #define	EPOCH_YR	1970
 //(24L * 60L * 60L)
-#define	SECS_DAY	86400UL  
+#define	SECS_DAY	86400UL
 #define	LEAPYEAR(year)	(!((year) % 4) && (((year) % 100) || !((year) % 400)))
 #define	YEARSIZE(year)	(LEAPYEAR(year) ? 366 : 365)
 
@@ -68,15 +67,13 @@ static const char day_abbrev[] PROGMEM = "SunMonTueWedThuFriSat";
 //
 // We could do this if ram was no issue:
 
-uint8_t monthlen(uint8_t isleapyear,uint8_t month){
+uint8_t monthlen(uint8_t isleapyear, uint8_t month)
+{
   const uint8_t mlen[2][12] = {
-    { 
-      31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }
-    ,
-    { 
-      31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }
+    {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31},
+    {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
   };
-  return(mlen[isleapyear][month]);
+  return (mlen[isleapyear][month]);
 }
 
 
@@ -86,14 +83,14 @@ uint8_t monthlen(uint8_t isleapyear,uint8_t month){
 // the entire display when the minutes have changed and otherwise just
 // write current time (clock). That way an LCD display needs complete
 // re-write only every minute.
-uint8_t gmtime(const uint32_t time,char *day, char *clock)
+uint8_t gmtime(const uint32_t time, char *day, char *clock)
 {
   char dstr[4];
   uint8_t i;
   uint32_t dayclock;
   uint16_t dayno;
   uint16_t tm_year = EPOCH_YR;
-  uint8_t tm_sec,tm_min,tm_hour,tm_wday,tm_mon;
+  uint8_t tm_sec, tm_min, tm_hour, tm_wday, tm_mon;
 
   dayclock = time % SECS_DAY;
   dayno = time / SECS_DAY;
@@ -101,44 +98,45 @@ uint8_t gmtime(const uint32_t time,char *day, char *clock)
   tm_sec = dayclock % 60UL;
   tm_min = (dayclock % 3600UL) / 60;
   tm_hour = dayclock / 3600UL;
-  tm_wday = (dayno + 4) % 7; 	/* day 0 was a thursday */
+  tm_wday = (dayno + 4) % 7;  /* day 0 was a thursday */
   while (dayno >= YEARSIZE(tm_year)) {
     dayno -= YEARSIZE(tm_year);
     tm_year++;
   }
   tm_mon = 0;
-  while (dayno >= monthlen(LEAPYEAR(tm_year),tm_mon)) {
-    dayno -= monthlen(LEAPYEAR(tm_year),tm_mon);
+  while (dayno >= monthlen(LEAPYEAR(tm_year), tm_mon)) {
+    dayno -= monthlen(LEAPYEAR(tm_year), tm_mon);
     tm_mon++;
   }
-  i=0;
-  while (i<3){
-    dstr[i]= pgm_read_byte(&(day_abbrev[tm_wday*3 + i])); 
+  i = 0;
+  while (i < 3) {
+    dstr[i] = pgm_read_byte(&(day_abbrev[tm_wday * 3 + i]));
     i++;
   }
-  dstr[3]='\0';
-  sprintf_P(day,PSTR("%s %u-%02u-%02u"),dstr,tm_year,tm_mon+1,dayno + 1);
-  sprintf_P(clock,PSTR("%02u:%02u:%02u"),tm_hour,tm_min,tm_sec);
-  return(tm_min);
+  dstr[3] = '\0';
+  sprintf_P(day, PSTR("%s %u-%02u-%02u"), dstr, tm_year, tm_mon + 1, dayno + 1);
+  sprintf_P(clock, PSTR("%02u:%02u:%02u"), tm_hour, tm_min, tm_sec);
+  return (tm_min);
 }
 
 
-void setup(){
-  Serial.println( F("EtherCard/Nanode NTP Client" ) );
+void setup()
+{
+  Serial.println(F("EtherCard/Nanode NTP Client"));
   Serial.begin(9600);
-  
+
   currentTimeserver = 0;
 
   uint8_t rev = ether.begin(sizeof Ethernet::buffer, mymac);
-  Serial.print( F("\nENC28J60 Revision ") );
-  Serial.println( rev, DEC );
-  if ( rev == 0) 
-    Serial.println( F( "Failed to access Ethernet controller" ) );
+  Serial.print(F("\nENC28J60 Revision "));
+  Serial.println(rev, DEC);
+  if (rev == 0)
+    Serial.println(F("Failed to access Ethernet controller"));
 
-  Serial.println( F( "Setting up DHCP" ));
+  Serial.println(F("Setting up DHCP"));
   if (!ether.dhcpSetup())
-    Serial.println( F( "DHCP failed" ));
-  
+    Serial.println(F("DHCP failed"));
+
   ether.printIp("My IP: ", ether.myip);
   ether.printIp("Netmask: ", ether.netmask);
   ether.printIp("GW IP: ", ether.gwip);
@@ -147,58 +145,57 @@ void setup(){
   lastUpdate = millis();
 }
 
-void loop(){
+void loop()
+{
   uint16_t dat_p;
   char day[22];
   char clock[22];
   int plen = 0;
-  
-  // Main processing loop now we have our addresses
-    // handle ping and wait for a tcp packet
-    plen = ether.packetReceive();
-    dat_p=ether.packetLoop(plen);
-    // Has unprocessed packet response
-    if (plen > 0) {
-      timeLong = 0L;
-     
-      if (ether.ntpProcessAnswer(&timeLong,clientPort)) {
-        Serial.print( F( "Time:" ));
-        Serial.println(timeLong); // secs since year 1900
-       
-        if (timeLong) {
-          timeLong -= GETTIMEOFDAY_TO_NTP_OFFSET;
-          gmtime(timeLong,day,clock);
-          Serial.print( day );
-          Serial.print( " " );
-          Serial.println( clock );
-        }
-      }
-    }
-    // Request an update every 20s
-    if( lastUpdate + 20000L < millis() ) {
-      // time to send request
-      lastUpdate = millis();
-      Serial.print( F("TimeSvr: " ) );
-      Serial.println( currentTimeserver, DEC );
 
-      if (!ether.dnsLookup( (char*)pgm_read_word(&(ntpList[currentTimeserver])) )) {
-        Serial.println( F("DNS failed" ));
-      } else {
-        ether.printIp("SRV: ", ether.hisip);
-        
-        Serial.print( F("Send NTP request " ));
-        Serial.println( currentTimeserver, DEC );
-      
-        ether.ntpRequest(ether.hisip, ++clientPort);
-        Serial.print( F("clientPort: "));
-        Serial.println(clientPort, DEC );
+  // Main processing loop now we have our addresses
+  // handle ping and wait for a tcp packet
+  plen = ether.packetReceive();
+  dat_p = ether.packetLoop(plen);
+  // Has unprocessed packet response
+  if (plen > 0) {
+    timeLong = 0L;
+
+    if (ether.ntpProcessAnswer(&timeLong, clientPort)) {
+      Serial.print(F("Time:"));
+      Serial.println(timeLong); // secs since year 1900
+
+      if (timeLong) {
+        timeLong -= GETTIMEOFDAY_TO_NTP_OFFSET;
+        gmtime(timeLong, day, clock);
+        Serial.print(day);
+        Serial.print(" ");
+        Serial.println(clock);
       }
-      if( ++currentTimeserver >= NUM_TIMESERVERS )
-        currentTimeserver = 0; 
     }
+  }
+  // Request an update every 20s
+  if (lastUpdate + 20000L < millis()) {
+    // time to send request
+    lastUpdate = millis();
+    Serial.print(F("TimeSvr: "));
+    Serial.println(currentTimeserver, DEC);
+
+    if (!ether.dnsLookup((char *) pgm_read_word(&(ntpList[currentTimeserver])))) {
+      Serial.println(F("DNS failed"));
+    } else {
+      ether.printIp("SRV: ", ether.hisip);
+
+      Serial.print(F("Send NTP request "));
+      Serial.println(currentTimeserver, DEC);
+
+      ether.ntpRequest(ether.hisip, ++clientPort);
+      Serial.print(F("clientPort: "));
+      Serial.println(clientPort, DEC);
+    }
+    if (++currentTimeserver >= NUM_TIMESERVERS)
+      currentTimeserver = 0;
+  }
 
 }
 
 // End
-
-
