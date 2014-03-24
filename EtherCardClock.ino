@@ -21,20 +21,13 @@ static uint8_t mymac[6] = { 0, 0, 0, 0, 0, 0 };
 static uint8_t mymac[6] = { 0x54, 0x55, 0x58, 0x10, 0x00, 0x25 };
 #endif
 
-static int currentTimeserver = 0;
 
-// Find list of servers at http://support.ntp.org/bin/view/Servers/StratumTwoTimeServers
-// Please observe server restrictions with regard to access to these servers.
-// This number should match how many ntp time server strings we have
-#define NUM_TIMESERVERS 3
-
-// Create an entry for each timeserver to use
-prog_char ntp0[] PROGMEM = "0.pool.ntp.org";
-prog_char ntp1[] PROGMEM = "1.pool.ntp.org";
-prog_char ntp2[] PROGMEM = "2.pool.ntp.org";
+#define MAX_NUM_SERVERS 5
 
 // Now define another array in PROGMEM for the above strings
-prog_char *ntpList[] PROGMEM = { ntp0, ntp1, ntp2 };
+uint8_t ntpServers[MAX_NUM_SERVERS][4];
+uint8_t ntpServerCount = 0;
+int currentNtpServer = 0;
 
 // Packet buffer, must be big enough for packet and payload
 byte Ethernet::buffer[550];
@@ -119,13 +112,26 @@ uint8_t gmtime(const uint32_t time, char *day, char *clock)
   return (tm_min);
 }
 
+void dhcpNtpOptionCallback(uint8_t option, const byte* ptr, uint8_t len)
+{
+    ntpServerCount = len / 4;
+
+    if (ntpServerCount > MAX_NUM_SERVERS)
+        ntpServerCount = MAX_NUM_SERVERS;
+
+    for(int i=0; i<ntpServerCount; i++) {
+        ether.printIp("NTP IP: ", ptr);
+        EtherCard::copyIp(ntpServers[i], (uint8_t*)ptr);
+        ptr += 4;
+    }
+}
 
 void setup()
 {
   Serial.println(F("EtherCard/Nanode NTP Client"));
   Serial.begin(9600);
 
-  currentTimeserver = 0;
+  currentNtpServer = 0;
 
   uint8_t rev = ether.begin(sizeof Ethernet::buffer, mymac);
   Serial.print(F("\nENC28J60 Revision "));
@@ -134,13 +140,19 @@ void setup()
     Serial.println(F("Failed to access Ethernet controller"));
 
   Serial.println(F("Setting up DHCP"));
+
+  // Register callback for DHCP option 42
+  ether.dhcpAddOptionCallback(42, dhcpNtpOptionCallback);
+
   if (!ether.dhcpSetup())
     Serial.println(F("DHCP failed"));
+    
+  if (ntpServerCount < 1)
+    Serial.println(F("DHCP did not return any NTP servers"));
 
   ether.printIp("My IP: ", ether.myip);
   ether.printIp("Netmask: ", ether.netmask);
   ether.printIp("GW IP: ", ether.gwip);
-  ether.printIp("DNS IP: ", ether.dnsip);
 
   lastUpdate = millis();
 }
@@ -173,27 +185,20 @@ void loop()
       }
     }
   }
+
   // Request an update every 20s
-  if (lastUpdate + 20000L < millis()) {
+  if (ntpServerCount && lastUpdate + 20000L < millis()) {
     // time to send request
     lastUpdate = millis();
     Serial.print(F("TimeSvr: "));
-    Serial.println(currentTimeserver, DEC);
+    Serial.println(currentNtpServer, DEC);
 
-    if (!ether.dnsLookup((char *) pgm_read_word(&(ntpList[currentTimeserver])))) {
-      Serial.println(F("DNS failed"));
-    } else {
-      ether.printIp("SRV: ", ether.hisip);
+    ether.ntpRequest(ntpServers[currentNtpServer], ++clientPort);
+    Serial.print(F("clientPort: "));
+    Serial.println(clientPort, DEC);
 
-      Serial.print(F("Send NTP request "));
-      Serial.println(currentTimeserver, DEC);
-
-      ether.ntpRequest(ether.hisip, ++clientPort);
-      Serial.print(F("clientPort: "));
-      Serial.println(clientPort, DEC);
-    }
-    if (++currentTimeserver >= NUM_TIMESERVERS)
-      currentTimeserver = 0;
+    if (++currentNtpServer >= ntpServerCount)
+      currentNtpServer = 0;
   }
 
 }
